@@ -7,6 +7,7 @@ import type {
   SettingsFile,
   UserPromptSubmitResult,
 } from "../types";
+import { formatMessage, resolveMessages } from "../messages";
 import {
   appendAdditionalContext,
   executeParsedHook,
@@ -20,6 +21,7 @@ export async function triggerUserPromptSubmitHooks(
   notify?: NotifyFn,
 ): Promise<UserPromptSubmitResult> {
   const groups = getHookGroups(settings, "UserPromptSubmit");
+  const msg = resolveMessages(settings);
   const result: UserPromptSubmitResult = { blocked: false };
 
   for (const group of groups) {
@@ -50,7 +52,9 @@ export async function triggerUserPromptSubmitHooks(
             jsonOutput.decision !== "block"
           ) {
             notify?.(
-              `UserPromptSubmit 忽略无效 decision: ${String(jsonOutput.decision)}`,
+              formatMessage(msg.userPromptSubmitInvalidDecision, {
+                decision: String(jsonOutput.decision),
+              }),
               "warning",
             );
           }
@@ -58,21 +62,32 @@ export async function triggerUserPromptSubmitHooks(
           if (jsonOutput.decision === "block") {
             result.blocked = true;
             result.reason =
-              getStringField(jsonOutput.reason) ?? "Blocked by hook";
+              getStringField(jsonOutput.reason) ?? msg.defaultBlockedReason;
             return result;
           }
         } else if (hookResult.exitCode === 0 && plainStdout) {
-          notify?.(`UserPromptSubmit 输出 (非JSON): ${plainStdout}`, "info");
+          notify?.(
+            formatMessage(msg.userPromptSubmitPlainOutput, {
+              output: plainStdout,
+            }),
+            "info",
+          );
         }
 
         if (hookResult.exitCode !== 0) {
           notify?.(
-            `UserPromptSubmit 失败 (exit ${hookResult.exitCode}): ${hookResult.stderr}`,
+            formatMessage(msg.userPromptSubmitFailed, {
+              exitCode: hookResult.exitCode,
+              stderr: hookResult.stderr,
+            }),
             "error",
           );
         }
       } catch (err) {
-        notify?.(`UserPromptSubmit 执行错误: ${String(err)}`, "error");
+        notify?.(
+          formatMessage(msg.userPromptSubmitError, { error: String(err) }),
+          "error",
+        );
       }
     }
   }
@@ -101,9 +116,12 @@ export function registerPromptHooks(
     );
 
     if (result.blocked) {
+      const blockMsg = resolveMessages(shared.currentSettings);
       shared.notify(
         ctx,
-        `UserPromptSubmit 阻止: ${result.reason ?? "Blocked by hook"}`,
+        formatMessage(blockMsg.userPromptSubmitBlocked, {
+          reason: result.reason ?? blockMsg.defaultBlockedReason,
+        }),
         "warning",
       );
       return { action: "handled" } as const;

@@ -1,5 +1,6 @@
 import { getHookGroups, matcherMatches } from "../config";
 import { buildHookInput, executeHook } from "../executor";
+import { formatMessage, resolveMessages } from "../messages";
 import type {
   Hook,
   HookExecutionContext,
@@ -227,6 +228,7 @@ export async function triggerSimpleHooks(
   notify?: NotifyFn,
 ): Promise<HookRunResult> {
   const groups = getHookGroups(settings, eventName);
+  const msg = resolveMessages(settings);
   const aggregatedResult: HookRunResult = {};
 
   for (const group of groups) {
@@ -271,7 +273,10 @@ export async function triggerSimpleHooks(
 
         if (hookResult.exitCode !== 0) {
           notify?.(
-            `Hook 失败 (exit ${hookResult.exitCode}): ${hookResult.stderr}`,
+            formatMessage(msg.hookFailed, {
+              exitCode: hookResult.exitCode,
+              stderr: hookResult.stderr,
+            }),
             "error",
           );
         } else if (
@@ -280,10 +285,16 @@ export async function triggerSimpleHooks(
           !jsonOutput &&
           commonOutput?.suppressOutput !== true
         ) {
-          notify?.(`Hook 输出: ${plainStdout}`, "info");
+          notify?.(
+            formatMessage(msg.hookOutput, { output: plainStdout }),
+            "info",
+          );
         }
       } catch (err) {
-        notify?.(`Hook 执行错误: ${String(err)}`, "error");
+        notify?.(
+          formatMessage(msg.hookError, { error: String(err) }),
+          "error",
+        );
       }
     }
   }

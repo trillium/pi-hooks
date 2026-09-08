@@ -87,13 +87,19 @@ export function loadSettings(cwd: string): {
   );
 
   const hooks = mergeHooks(globalSettings?.hooks, projectSettings?.hooks);
+  // Project-level message overrides win per-key over global ones.
+  const messages = {
+    ...globalSettings?.messages,
+    ...projectSettings?.messages,
+  };
+  const hasMessages = Object.keys(messages).length > 0;
 
-  if (!hooks) {
+  if (!hooks && !hasMessages) {
     return { settings: undefined, sourcePaths };
   }
 
   return {
-    settings: { hooks },
+    settings: { hooks, ...(hasMessages ? { messages } : {}) },
     sourcePaths,
   };
 }

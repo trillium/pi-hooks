@@ -8,6 +8,7 @@ import type {
   SettingsFile,
   StopResult,
 } from "../types";
+import { formatMessage, resolveMessages } from "../messages";
 import {
   appendAdditionalContext,
   executeParsedHook,
@@ -36,6 +37,7 @@ export async function triggerStopHooks(
   notify?: NotifyFn,
 ): Promise<StopResult> {
   const groups = getHookGroups(settings, "Stop");
+  const msg = resolveMessages(settings);
   const result: StopResult = { blocked: false };
 
   for (const group of groups) {
@@ -66,7 +68,9 @@ export async function triggerStopHooks(
             jsonOutput.decision !== "block"
           ) {
             notify?.(
-              `Stop 忽略无效 decision: ${String(jsonOutput.decision)}`,
+              formatMessage(msg.stopInvalidDecision, {
+                decision: String(jsonOutput.decision),
+              }),
               "warning",
             );
           }
@@ -74,22 +78,30 @@ export async function triggerStopHooks(
           if (jsonOutput.decision === "block") {
             result.blocked = true;
             result.reason =
-              getStringField(jsonOutput.reason) ??
-              "Continue requested by Stop hook";
+              getStringField(jsonOutput.reason) ?? msg.stopBlockReason;
             return result;
           }
         } else if (hookResult.exitCode === 0 && plainStdout) {
-          notify?.(`Stop 输出 (非JSON): ${plainStdout}`, "info");
+          notify?.(
+            formatMessage(msg.stopPlainOutput, { output: plainStdout }),
+            "info",
+          );
         }
 
         if (hookResult.exitCode !== 0) {
           notify?.(
-            `Stop 失败 (exit ${hookResult.exitCode}): ${hookResult.stderr}`,
+            formatMessage(msg.stopFailed, {
+              exitCode: hookResult.exitCode,
+              stderr: hookResult.stderr,
+            }),
             "error",
           );
         }
       } catch (err) {
-        notify?.(`Stop 执行错误: ${String(err)}`, "error");
+        notify?.(
+          formatMessage(msg.stopError, { error: String(err) }),
+          "error",
+        );
       }
     }
   }

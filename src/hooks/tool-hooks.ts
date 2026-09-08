@@ -9,6 +9,7 @@ import type {
   PreToolUseResult,
   SettingsFile,
 } from "../types";
+import { formatMessage, resolveMessages } from "../messages";
 import {
   appendAdditionalContext,
   executeParsedHook,
@@ -24,6 +25,7 @@ export async function triggerPreToolUseHooks(
   notify?: NotifyFn,
 ): Promise<PreToolUseResult> {
   const groups = getHookGroups(settings, "PreToolUse");
+  const msg = resolveMessages(settings);
   const result: PreToolUseResult = { blocked: false };
 
   for (const group of groups) {
@@ -38,8 +40,11 @@ export async function triggerPreToolUseHooks(
 
         if (hookResult.exitCode === 2) {
           result.blocked = true;
-          result.reason = hookResult.stderr || "Blocked by hook";
-          notify?.(`PreToolUse 阻止: ${result.reason}`, "warning");
+          result.reason = hookResult.stderr || msg.defaultBlockedReason;
+          notify?.(
+            formatMessage(msg.preToolUseBlocked, { reason: result.reason }),
+            "warning",
+          );
           return result;
         }
 
@@ -63,8 +68,11 @@ export async function triggerPreToolUseHooks(
             result.blocked = true;
             result.reason = (hookSpecific?.permissionDecisionReason ??
               jsonOutput.permissionDecisionReason) as string | undefined;
-            result.reason ??= "Blocked by hook";
-            notify?.(`PreToolUse 拒绝: ${result.reason}`, "warning");
+            result.reason ??= msg.defaultBlockedReason;
+            notify?.(
+              formatMessage(msg.preToolUseDenied, { reason: result.reason }),
+              "warning",
+            );
             return result;
           }
 
@@ -86,17 +94,26 @@ export async function triggerPreToolUseHooks(
             additionalContext,
           );
         } else if (hookResult.exitCode === 0 && plainStdout) {
-          notify?.(`PreToolUse 输出 (非JSON): ${plainStdout}`, "info");
+          notify?.(
+            formatMessage(msg.preToolUsePlainOutput, { output: plainStdout }),
+            "info",
+          );
         }
 
         if (hookResult.exitCode !== 0 && hookResult.exitCode !== 2) {
           notify?.(
-            `PreToolUse 失败 (exit ${hookResult.exitCode}): ${hookResult.stderr}`,
+            formatMessage(msg.preToolUseFailed, {
+              exitCode: hookResult.exitCode,
+              stderr: hookResult.stderr,
+            }),
             "error",
           );
         }
       } catch (err) {
-        notify?.(`PreToolUse 执行错误: ${String(err)}`, "error");
+        notify?.(
+          formatMessage(msg.preToolUseError, { error: String(err) }),
+          "error",
+        );
       }
     }
   }
@@ -111,6 +128,7 @@ export async function triggerPostToolUseHooks(
   notify?: NotifyFn,
 ): Promise<PostToolUseResult> {
   const groups = getHookGroups(settings, "PostToolUse");
+  const msg = resolveMessages(settings);
   const result: PostToolUseResult = {};
 
   for (const group of groups) {
@@ -124,7 +142,12 @@ export async function triggerPostToolUseHooks(
           await executeParsedHook(hook, context, "PostToolUse");
 
         if (hookResult.exitCode === 2) {
-          notify?.(`PostToolUse 反馈: ${hookResult.stderr}`, "warning");
+          notify?.(
+            formatMessage(msg.postToolUseFeedback, {
+              stderr: hookResult.stderr,
+            }),
+            "warning",
+          );
           continue;
         }
 
@@ -152,17 +175,26 @@ export async function triggerPostToolUseHooks(
           if (patch.details !== undefined) result.details = patch.details;
           if (patch.isError !== undefined) result.isError = patch.isError;
         } else if (hookResult.exitCode === 0 && plainStdout) {
-          notify?.(`PostToolUse 输出: ${plainStdout}`, "info");
+          notify?.(
+            formatMessage(msg.postToolUseOutput, { output: plainStdout }),
+            "info",
+          );
         }
 
         if (hookResult.exitCode !== 0 && hookResult.exitCode !== 2) {
           notify?.(
-            `PostToolUse 失败 (exit ${hookResult.exitCode}): ${hookResult.stderr}`,
+            formatMessage(msg.postToolUseFailed, {
+              exitCode: hookResult.exitCode,
+              stderr: hookResult.stderr,
+            }),
             "error",
           );
         }
       } catch (err) {
-        notify?.(`PostToolUse 执行错误: ${String(err)}`, "error");
+        notify?.(
+          formatMessage(msg.postToolUseError, { error: String(err) }),
+          "error",
+        );
       }
     }
   }
@@ -177,6 +209,7 @@ export async function triggerPostToolUseFailureHooks(
   notify?: NotifyFn,
 ): Promise<PostToolUseResult> {
   const groups = getHookGroups(settings, "PostToolUseFailure");
+  const msg = resolveMessages(settings);
   const result: PostToolUseResult = {};
 
   for (const group of groups) {
@@ -190,7 +223,12 @@ export async function triggerPostToolUseFailureHooks(
           await executeParsedHook(hook, context, "PostToolUseFailure");
 
         if (hookResult.exitCode === 2) {
-          notify?.(`PostToolUseFailure 反馈: ${hookResult.stderr}`, "warning");
+          notify?.(
+            formatMessage(msg.postToolUseFailureFeedback, {
+              stderr: hookResult.stderr,
+            }),
+            "warning",
+          );
           continue;
         }
 
@@ -221,17 +259,28 @@ export async function triggerPostToolUseFailureHooks(
           if (patch.details !== undefined) result.details = patch.details;
           if (patch.isError !== undefined) result.isError = patch.isError;
         } else if (hookResult.exitCode === 0 && plainStdout) {
-          notify?.(`PostToolUseFailure 输出: ${plainStdout}`, "info");
+          notify?.(
+            formatMessage(msg.postToolUseFailureOutput, {
+              output: plainStdout,
+            }),
+            "info",
+          );
         }
 
         if (hookResult.exitCode !== 0 && hookResult.exitCode !== 2) {
           notify?.(
-            `PostToolUseFailure 失败 (exit ${hookResult.exitCode}): ${hookResult.stderr}`,
+            formatMessage(msg.postToolUseFailureFailed, {
+              exitCode: hookResult.exitCode,
+              stderr: hookResult.stderr,
+            }),
             "error",
           );
         }
       } catch (err) {
-        notify?.(`PostToolUseFailure 执行错误: ${String(err)}`, "error");
+        notify?.(
+          formatMessage(msg.postToolUseFailureError, { error: String(err) }),
+          "error",
+        );
       }
     }
   }
@@ -261,7 +310,9 @@ export function registerToolHooks(pi: ExtensionAPI, shared: HookModuleContext) {
     }
 
     if (result.stopProcessing) {
-      const stopReason = result.stopReason ?? "Stopped by hook";
+      const stopReason =
+        result.stopReason ??
+        resolveMessages(shared.currentSettings).preToolUseStoppedReason;
       ctx.abort?.();
       return { block: true, reason: stopReason };
     }
