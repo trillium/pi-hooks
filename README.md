@@ -530,6 +530,28 @@ Notes:
   - `updatedMCPToolOutput` (for MCP tool output replacement)
   - `hookSpecificOutput.updatedMCPToolOutput`
 
+## Custom Messages
+
+All user-facing notification strings (e.g. `PreToolUse 阻止: …`) can be
+overridden with a top-level `messages` key. Keys are listed in
+`src/messages.ts`; unset keys fall back to the built-in defaults, so existing
+configs keep working unchanged. Templates accept `{reason}`, `{output}`,
+`{stderr}`, `{error}`, `{exitCode}`, and `{decision}` placeholders.
+
+```json
+{
+  "hooks": { "Stop": [{ "hooks": [{ "type": "command", "command": "..." }] }] },
+  "messages": {
+    "preToolUseBlocked": "Blocked: {reason}",
+    "stopError": "Stop hook crashed: {error}",
+    "defaultBlockedReason": "Denied by policy"
+  }
+}
+```
+
+`messages` merges like `hooks`: project settings override the global
+settings per key.
+
 ## Usage
 
 ### Local development
@@ -565,6 +587,7 @@ Source code lives in `src/`:
 - `src/hooks/tool-hooks.ts` - `PreToolUse` / `PostToolUse` / `PostToolUseFailure`
 - `src/hooks/stop-hooks.ts` - `Stop`
 - `src/types.ts` - type definitions
+- `src/messages.ts` - default notification strings + `{var}` formatting
 
 ## Notes
 

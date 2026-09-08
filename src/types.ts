@@ -1,3 +1,5 @@
+import type { HookMessages } from "./messages";
+
 // ============================================================================
 // 类型定义
 // ============================================================================
@@ -45,6 +47,8 @@ export type HooksConfig = {
 
 export type SettingsFile = {
   hooks?: HooksConfig;
+  /** Partial overrides for the user-facing notification strings (see messages.ts). */
+  messages?: HookMessages;
 };
 
 export type HookEventName =

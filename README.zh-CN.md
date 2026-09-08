@@ -530,6 +530,26 @@ Pi 扩展层也支持直接 patch 工具结果：
   - `updatedMCPToolOutput`（用于 MCP 工具输出替换）
   - `hookSpecificOutput.updatedMCPToolOutput`
 
+## 自定义通知文本
+
+所有面向用户的通知文本（例如 `PreToolUse 阻止: …`）都可以通过顶层 `messages`
+键覆盖。可用的键定义在 `src/messages.ts` 中；未设置的键沿用内置默认值，
+现有配置不受影响。模板支持 `{reason}`、`{output}`、`{stderr}`、`{error}`、
+`{exitCode}` 和 `{decision}` 占位符。
+
+```json
+{
+  "hooks": { "Stop": [{ "hooks": [{ "type": "command", "command": "..." }] }] },
+  "messages": {
+    "preToolUseBlocked": "Blocked: {reason}",
+    "stopError": "Stop hook crashed: {error}",
+    "defaultBlockedReason": "Denied by policy"
+  }
+}
+```
+
+`messages` 与 `hooks` 的合并规则一致：项目配置按 key 覆盖全局配置。
+
 ## 使用方法
 
 ### 本地开发
@@ -565,6 +585,7 @@ pi install npm:@hsingjui/pi-hooks
 - `src/hooks/tool-hooks.ts` - `PreToolUse` / `PostToolUse` / `PostToolUseFailure`
 - `src/hooks/stop-hooks.ts` - `Stop`
 - `src/types.ts` - 类型定义
+- `src/messages.ts` - 默认通知文本 + `{var}` 格式化
 
 ## 说明
 
